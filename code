@@ -1,0 +1,1090 @@
+/*!
+ * MindPlus
+ * mpython
+ *
+ */
+#include <WiFi.h>
+#include <MPython.h>
+#include <TimeLib.h>
+#include <WiFiClient.h>
+#define BLYNK_PRINT Serial
+#include <DFRobot_NeoPixel.h>
+#include <BlynkSimpleEsp32.h>
+#include <WidgetRTC.h>
+
+// 动态变量
+String         mind_s_Yao1ShiJian, mind_s_Yao2ShiJian, mind_s_Yao3ShiJian, mind_s_YaoShiJian;
+volatile float mind_n_Yao1ShuLiang, mind_n_Yao1Fan, mind_n_Yao2ShuLiang, mind_n_Yao2Fan,
+               mind_n_Yao3ShuLiang, mind_n_Yao3Fan, mind_n_SheZhi, mind_n_YaoFan,
+               mind_n_YaoShuLiang, mind_n_XianShi, mind_n_NaoZhong1, mind_n_NaoZhong2,
+               mind_n_NaoZhong3, mind_n_NaoZhong4, mind_n_NaoZhong5, mind_n_NaoZhong6,
+               mind_n_NaoZhongKaiGuan, mind_n_Yao1FuYaoZhuangTai, mind_n_Yao2FuYaoZhuangTai,
+               mind_n_Yao3FuYaoZhuangTai, mind_n_ShiZhongXianShi;
+// 函数声明
+void DF_YaoShuLiangDuQu();
+void DF_FanQianFanHou();
+void DF_Yao1();
+void DF_Yao2();
+void DF_Yao3();
+void DF_NaoZhong();
+void DF_SheZhi();
+void DF_ShiZhong();
+void myTimerEvent1();
+// 创建对象
+DFRobot_NeoPixel neoPixel_P13;
+DFRobot_NeoPixel neoPixel_P14;
+DFRobot_NeoPixel neoPixel_P15;
+WidgetLED        ledV16(V16);
+WidgetLED        ledV17(V17);
+WidgetLED        ledV18(V18);
+WidgetRTC        rtc;
+BlynkTimer       timer;
+
+
+// 主程序开始
+void setup() {
+        mPython.begin();
+        Serial.begin(9600);
+        Blynk.connectWiFi("zmg", "123456789");
+        Blynk.config("BO5a5saSNfm7GvfKI25MafRNjo8DFy9Q", "blynk.mixly.org", 8080);
+        setSyncInterval(10 * 60);
+        timer.setInterval(1000L, myTimerEvent1);
+        display.setCursor(20, 20);
+        display.print("正在连接Wi-Fi");
+        delay(1000);
+        delay(1000);
+        display.fillScreen(0);
+        display.setCursor(30, 20);
+        display.print("Wi-Fi 已连接");
+        mind_n_Yao1ShuLiang = 0;
+        mind_n_Yao1Fan = 0;
+        mind_s_Yao1ShiJian = "";
+        mind_n_Yao2ShuLiang = 0;
+        mind_n_Yao2Fan = 0;
+        mind_s_Yao2ShiJian = "";
+        mind_n_Yao3ShuLiang = 0;
+        mind_n_Yao3Fan = 0;
+        mind_s_Yao3ShiJian = "";
+        mind_n_SheZhi = 0;
+        mind_n_YaoFan = 0;
+        mind_n_YaoShuLiang = 0;
+        mind_n_XianShi = 0;
+        mind_n_NaoZhong1 = 0;
+        mind_n_NaoZhong2 = 0;
+        mind_n_NaoZhong3 = 0;
+        mind_n_NaoZhong4 = 0;
+        mind_n_NaoZhong5 = 0;
+        mind_n_NaoZhong6 = 0;
+        mind_n_NaoZhongKaiGuan = 0;
+        mind_n_Yao1FuYaoZhuangTai = 0;
+        mind_n_Yao2FuYaoZhuangTai = 0;
+        mind_n_Yao3FuYaoZhuangTai = 0;
+        mind_s_YaoShiJian = "";
+        neoPixel_P13.begin(P13, 8);
+        neoPixel_P13.setBrightness(255);
+        neoPixel_P13.clear();
+        neoPixel_P14.begin(P14, 8);
+        neoPixel_P14.setBrightness(255);
+        neoPixel_P14.clear();
+        neoPixel_P15.begin(P15, 8);
+        neoPixel_P15.setBrightness(255);
+        neoPixel_P15.clear();
+        display.fillScreen(0);
+        display.setCursor(33, 0);
+        display.print("智能药盒");
+        display.setCursor(0, 16);
+        display.print("药1：");
+        display.setCursor(0, 32);
+        display.print("药2：");
+        display.setCursor(0, 48);
+        display.print("药3：");
+        ledV16.setColor("#2550000");
+        ledV16.off();
+        ledV17.setColor("#2550000");
+        ledV17.off();
+        ledV18.setColor("#2550000");
+        ledV18.off();
+}
+void loop() {
+        Blynk.run();
+        DF_NaoZhong();
+        if ((mind_n_SheZhi==0)) {
+                if (((analogRead(P1))<1400)) {
+                        if (((mind_n_XianShi==0) || (mind_n_XianShi==2))) {
+                                mind_n_XianShi = 1;
+                        }
+                }
+                else if ((2000<(analogRead(P1)))) {
+                        if (((mind_n_XianShi==1) || (mind_n_XianShi==2))) {
+                                mind_n_XianShi = 0;
+                        }
+                }
+                else {
+                        mind_n_XianShi = 2;
+                }
+                if ((mind_n_XianShi==2)) {
+                        if ((mind_n_ShiZhongXianShi==0)) {
+                                display.fillScreen(0);
+                                mind_n_ShiZhongXianShi = 1;
+                        }
+                        DF_ShiZhong();
+                }
+                else if ((mind_n_XianShi==1)) {
+                        mind_n_ShiZhongXianShi = 0;
+                        display.fillScreen(0);
+                        display.setCursor(33, 0);
+                        display.print("智能药盒");
+                        display.setCursor(0, 16);
+                        display.print("药1：");
+                        display.setCursor(0, 32);
+                        display.print("药2：");
+                        display.setCursor(0, 48);
+                        display.print("药3：");
+                        if ((mind_n_Yao1ShuLiang>0)) {
+                                neoPixel_P13.clear();
+                                DF_Yao1();
+                        }
+                        else {
+                                neoPixel_P13.clear();
+                        }
+                        if ((mind_n_Yao2ShuLiang>0)) {
+                                neoPixel_P14.clear();
+                                DF_Yao2();
+                        }
+                        else {
+                                neoPixel_P14.clear();
+                        }
+                        if ((mind_n_Yao3ShuLiang>0)) {
+                                neoPixel_P15.clear();
+                                DF_Yao3();
+                        }
+                        else {
+                                neoPixel_P15.clear();
+                        }
+                        mind_n_XianShi += 2;
+                }
+                else if ((mind_n_XianShi==0)) {
+                        display.fillScreen(0);
+                        neoPixel_P13.clear();
+                        neoPixel_P14.clear();
+                        neoPixel_P15.clear();
+                        mind_n_XianShi += 3;
+                }
+                else {
+                }
+        }
+        if ((touchPadP.isTouched())) {
+                if ((mind_n_Yao1FuYaoZhuangTai==0)) {
+                        mind_n_Yao1FuYaoZhuangTai = 1;
+                        ledV16.setColor("#0025500");
+                        ledV16.on();
+                        neoPixel_P13.setBrightness(10);
+                }
+                else {
+                        mind_n_Yao1FuYaoZhuangTai = 0;
+                        neoPixel_P13.setBrightness(255);
+                        ledV16.setColor("#2550000");
+                        ledV16.on();
+                }
+                delay(1000);
+        }
+        if ((touchPadY.isTouched())) {
+                if ((mind_n_Yao2FuYaoZhuangTai==0)) {
+                        mind_n_Yao2FuYaoZhuangTai = 1;
+                        ledV17.setColor("#0025500");
+                        ledV17.on();
+                        neoPixel_P14.setBrightness(10);
+                }
+                else {
+                        mind_n_Yao2FuYaoZhuangTai = 0;
+                        neoPixel_P14.setBrightness(255);
+                        ledV17.setColor("#2550000");
+                        ledV17.on();
+                }
+                delay(1000);
+        }
+        if ((touchPadT.isTouched())) {
+                if ((mind_n_Yao3FuYaoZhuangTai==0)) {
+                        mind_n_Yao3FuYaoZhuangTai = 1;
+                        neoPixel_P15.setBrightness(10);
+                        ledV18.setColor("#0025500");
+                        ledV18.on();
+                }
+                else {
+                        mind_n_Yao3FuYaoZhuangTai = 0;
+                        ledV18.setColor("#2550000");
+                        ledV18.on();
+                        neoPixel_P15.setBrightness(255);
+                }
+                delay(1000);
+        }
+        if ((buttonB.isPressed())) {
+                delay(2000);
+                if ((buttonB.isPressed())) {
+                        mind_n_SheZhi = 1;
+                        mind_n_Yao1ShuLiang = 0;
+                        mind_n_Yao1Fan = 0;
+                        mind_s_Yao1ShiJian = "";
+                        mind_n_Yao2ShuLiang = 0;
+                        mind_n_Yao2Fan = 0;
+                        mind_s_Yao2ShiJian = "";
+                        mind_n_Yao3ShuLiang = 0;
+                        mind_n_Yao3Fan = 0;
+                        mind_s_Yao3ShiJian = "";
+                        mind_n_SheZhi = 0;
+                        mind_n_YaoFan = 0;
+                        mind_n_YaoShuLiang = 0;
+                        mind_n_XianShi = 0;
+                        mind_s_YaoShiJian = "";
+                        DF_SheZhi();
+                }
+        }
+        if (((((hour()==5) || (hour()==9)) || (hour()==15)) && (minute()==0))) {
+                neoPixel_P13.setBrightness(255);
+                neoPixel_P14.setBrightness(255);
+                neoPixel_P15.setBrightness(255);
+        }
+}
+
+
+// 自定义函数
+void DF_YaoShuLiangDuQu() {
+        if (((analogRead(P2))<100)) {
+                mind_n_YaoShuLiang = 0;
+        }
+        else if (((analogRead(P2))<600)) {
+                mind_n_YaoShuLiang = 1;
+        }
+        else if (((analogRead(P2))<1100)) {
+                mind_n_YaoShuLiang = 2;
+        }
+        else if (((analogRead(P2))<1600)) {
+                mind_n_YaoShuLiang = 3;
+        }
+        else if (((analogRead(P2))<2100)) {
+                mind_n_YaoShuLiang = 4;
+        }
+        else if (((analogRead(P2))<2600)) {
+                mind_n_YaoShuLiang = 5;
+        }
+        else if (((analogRead(P2))<3100)) {
+                mind_n_YaoShuLiang = 6;
+        }
+        else if (((analogRead(P2))<3600)) {
+                mind_n_YaoShuLiang = 7;
+        }
+        else {
+                mind_n_YaoShuLiang = 8;
+        }
+}
+void DF_FanQianFanHou() {
+        if (((analogRead(P1))<1900)) {
+                mind_n_YaoFan = 0;
+        }
+        else {
+                mind_n_YaoFan = 1;
+        }
+}
+void DF_Yao1() {
+        if ((mind_n_Yao1Fan==0)) {
+                if ((mind_n_Yao1ShuLiang==1)) {
+                        neoPixel_P13.setRangeColor(0, 0, 0x00FF00);
+                }
+                else if ((mind_n_Yao1ShuLiang==2)) {
+                        neoPixel_P13.setRangeColor(0, 1, 0x00FF00);
+                }
+                else if ((mind_n_Yao1ShuLiang==3)) {
+                        neoPixel_P13.setRangeColor(0, 1, 0x00FF00);
+                        neoPixel_P13.setRangeColor(7, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao1ShuLiang==4)) {
+                        neoPixel_P13.setRangeColor(0, 1, 0x00FF00);
+                        neoPixel_P13.setRangeColor(6, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao1ShuLiang==5)) {
+                        neoPixel_P13.setRangeColor(0, 2, 0x00FF00);
+                        neoPixel_P13.setRangeColor(6, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao1ShuLiang==6)) {
+                        neoPixel_P13.setRangeColor(0, 2, 0x00FF00);
+                        neoPixel_P13.setRangeColor(5, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao1ShuLiang==7)) {
+                        neoPixel_P13.setRangeColor(0, 3, 0x00FF00);
+                        neoPixel_P13.setRangeColor(5, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao1ShuLiang==8)) {
+                        neoPixel_P13.setRangeColor(0, 7, 0x00FF00);
+                }
+        }
+        else {
+                if ((mind_n_Yao1ShuLiang==1)) {
+                        neoPixel_P13.setRangeColor(4, 4, 0x0000FF);
+                }
+                else if ((mind_n_Yao1ShuLiang==2)) {
+                        neoPixel_P13.setRangeColor(4, 5, 0x0000FF);
+                }
+                else if ((mind_n_Yao1ShuLiang==3)) {
+                        neoPixel_P13.setRangeColor(3, 5, 0x0000FF);
+                }
+                else if ((mind_n_Yao1ShuLiang==4)) {
+                        neoPixel_P13.setRangeColor(3, 6, 0x0000FF);
+                }
+                else if ((mind_n_Yao1ShuLiang==5)) {
+                        neoPixel_P13.setRangeColor(2, 6, 0x0000FF);
+                }
+                else if ((mind_n_Yao1ShuLiang==6)) {
+                        neoPixel_P13.setRangeColor(2, 7, 0x0000FF);
+                }
+                else if ((mind_n_Yao1ShuLiang==7)) {
+                        neoPixel_P13.setRangeColor(1, 7, 0x0000FF);
+                }
+                else if ((mind_n_Yao1ShuLiang==8)) {
+                        neoPixel_P13.setRangeColor(0, 7, 0x0000FF);
+                }
+        }
+        display.setCursor(0, 16);
+        display.print("药1：");
+        display.setCursor(30, 16);
+        display.print(mind_n_Yao1ShuLiang);
+        if ((mind_n_Yao1Fan==0)) {
+                display.setCursor(45, 16);
+                display.print("饭前");
+        }
+        else {
+                display.setCursor(45, 16);
+                display.print("饭后");
+        }
+        if (((String(mind_s_Yao1ShiJian).indexOf(String("早")) != -1))) {
+                display.setCursor(80, 16);
+                display.print("早");
+        }
+        if (((String(mind_s_Yao1ShiJian).indexOf(String("中")) != -1))) {
+                display.setCursor(95, 16);
+                display.print("中");
+        }
+        if (((String(mind_s_Yao1ShiJian).indexOf(String("晚")) != -1))) {
+                display.setCursor(110, 16);
+                display.print("晚");
+        }
+}
+void DF_Yao2() {
+        if ((mind_n_Yao2Fan==0)) {
+                if ((mind_n_Yao2ShuLiang==1)) {
+                        neoPixel_P14.setRangeColor(0, 0, 0x00FF00);
+                }
+                else if ((mind_n_Yao2ShuLiang==2)) {
+                        neoPixel_P14.setRangeColor(0, 1, 0x00FF00);
+                }
+                else if ((mind_n_Yao2ShuLiang==3)) {
+                        neoPixel_P14.setRangeColor(0, 1, 0x00FF00);
+                        neoPixel_P14.setRangeColor(7, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao2ShuLiang==4)) {
+                        neoPixel_P14.setRangeColor(0, 1, 0x00FF00);
+                        neoPixel_P14.setRangeColor(6, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao2ShuLiang==5)) {
+                        neoPixel_P14.setRangeColor(0, 2, 0x00FF00);
+                        neoPixel_P14.setRangeColor(6, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao2ShuLiang==6)) {
+                        neoPixel_P14.setRangeColor(0, 2, 0x00FF00);
+                        neoPixel_P14.setRangeColor(5, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao2ShuLiang==7)) {
+                        neoPixel_P14.setRangeColor(0, 3, 0x00FF00);
+                        neoPixel_P14.setRangeColor(5, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao2ShuLiang==8)) {
+                        neoPixel_P14.setRangeColor(0, 7, 0x00FF00);
+                }
+        }
+        else {
+                if ((mind_n_Yao2ShuLiang==1)) {
+                        neoPixel_P14.setRangeColor(4, 4, 0x0000FF);
+                }
+                else if ((mind_n_Yao2ShuLiang==2)) {
+                        neoPixel_P14.setRangeColor(4, 5, 0x0000FF);
+                }
+                else if ((mind_n_Yao2ShuLiang==3)) {
+                        neoPixel_P14.setRangeColor(3, 5, 0x0000FF);
+                }
+                else if ((mind_n_Yao2ShuLiang==4)) {
+                        neoPixel_P14.setRangeColor(3, 6, 0x0000FF);
+                }
+                else if ((mind_n_Yao2ShuLiang==5)) {
+                        neoPixel_P14.setRangeColor(2, 6, 0x0000FF);
+                }
+                else if ((mind_n_Yao2ShuLiang==6)) {
+                        neoPixel_P14.setRangeColor(2, 7, 0x0000FF);
+                }
+                else if ((mind_n_Yao2ShuLiang==7)) {
+                        neoPixel_P14.setRangeColor(1, 7, 0x0000FF);
+                }
+                else if ((mind_n_Yao2ShuLiang==8)) {
+                        neoPixel_P14.setRangeColor(0, 7, 0x0000FF);
+                }
+        }
+        display.setCursor(0, 32);
+        display.print("药2：");
+        display.setCursor(30, 32);
+        display.print(mind_n_Yao2ShuLiang);
+        if ((mind_n_Yao2Fan==0)) {
+                display.setCursor(45, 32);
+                display.print("饭前");
+        }
+        else {
+                display.setCursor(45, 32);
+                display.print("饭后");
+        }
+        if (((String(mind_s_Yao2ShiJian).indexOf(String("早")) != -1))) {
+                display.setCursor(80, 32);
+                display.print("早");
+        }
+        if (((String(mind_s_Yao2ShiJian).indexOf(String("中")) != -1))) {
+                display.setCursor(95, 32);
+                display.print("中");
+        }
+        if (((String(mind_s_Yao2ShiJian).indexOf(String("晚")) != -1))) {
+                display.setCursor(110, 32);
+                display.print("晚");
+        }
+}
+void DF_Yao3() {
+        if ((mind_n_Yao3Fan==0)) {
+                if ((mind_n_Yao3ShuLiang==1)) {
+                        neoPixel_P15.setRangeColor(0, 0, 0x00FF00);
+                }
+                else if ((mind_n_Yao3ShuLiang==2)) {
+                        neoPixel_P15.setRangeColor(0, 1, 0x00FF00);
+                }
+                else if ((mind_n_Yao3ShuLiang==3)) {
+                        neoPixel_P15.setRangeColor(0, 1, 0x00FF00);
+                        neoPixel_P15.setRangeColor(7, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao3ShuLiang==4)) {
+                        neoPixel_P15.setRangeColor(0, 1, 0x00FF00);
+                        neoPixel_P15.setRangeColor(6, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao3ShuLiang==5)) {
+                        neoPixel_P15.setRangeColor(0, 2, 0x00FF00);
+                        neoPixel_P15.setRangeColor(6, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao3ShuLiang==6)) {
+                        neoPixel_P15.setRangeColor(0, 2, 0x00FF00);
+                        neoPixel_P15.setRangeColor(5, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao3ShuLiang==7)) {
+                        neoPixel_P15.setRangeColor(0, 3, 0x00FF00);
+                        neoPixel_P15.setRangeColor(5, 7, 0x00FF00);
+                }
+                else if ((mind_n_Yao3ShuLiang==8)) {
+                        neoPixel_P15.setRangeColor(0, 7, 0x00FF00);
+                }
+        }
+        else {
+                if ((mind_n_Yao3ShuLiang==1)) {
+                        neoPixel_P15.setRangeColor(4, 4, 0x0000FF);
+                }
+                else if ((mind_n_Yao3ShuLiang==2)) {
+                        neoPixel_P15.setRangeColor(4, 5, 0x0000FF);
+                }
+                else if ((mind_n_Yao3ShuLiang==3)) {
+                        neoPixel_P15.setRangeColor(3, 5, 0x0000FF);
+                }
+                else if ((mind_n_Yao3ShuLiang==4)) {
+                        neoPixel_P15.setRangeColor(3, 6, 0x0000FF);
+                }
+                else if ((mind_n_Yao3ShuLiang==5)) {
+                        neoPixel_P15.setRangeColor(2, 6, 0x0000FF);
+                }
+                else if ((mind_n_Yao3ShuLiang==6)) {
+                        neoPixel_P15.setRangeColor(2, 7, 0x0000FF);
+                }
+                else if ((mind_n_Yao3ShuLiang==7)) {
+                        neoPixel_P15.setRangeColor(1, 7, 0x0000FF);
+                }
+                else if ((mind_n_Yao3ShuLiang==8)) {
+                        neoPixel_P15.setRangeColor(0, 7, 0x0000FF);
+                }
+        }
+        display.setCursor(0, 48);
+        display.print("药3：");
+        display.setCursor(30, 48);
+        display.print(mind_n_Yao3ShuLiang);
+        if ((mind_n_Yao3Fan==0)) {
+                display.setCursor(45, 48);
+                display.print("饭前");
+        }
+        else {
+                display.setCursor(45, 48);
+                display.print("饭后");
+        }
+        if (((String(mind_s_Yao3ShiJian).indexOf(String("早")) != -1))) {
+                display.setCursor(80, 48);
+                display.print("早");
+        }
+        if (((String(mind_s_Yao3ShiJian).indexOf(String("中")) != -1))) {
+                display.setCursor(95, 48);
+                display.print("中");
+        }
+        if (((String(mind_s_Yao3ShiJian).indexOf(String("晚")) != -1))) {
+                display.setCursor(110, 48);
+                display.print("晚");
+        }
+}
+void DF_NaoZhong() {
+        if (((analogRead(P2))<1500)) {
+                mind_n_NaoZhongKaiGuan = 1;
+        }
+        else if ((2000<(analogRead(P2)))) {
+                mind_n_NaoZhongKaiGuan = 0;
+        }
+        else {
+        }
+        if ((mind_n_NaoZhongKaiGuan==1)) {
+                if ((mind_n_NaoZhong1>0)) {
+                        if (((hour()==mind_n_NaoZhong1) && (minute()==0))) {
+                                timer.run();
+                        }
+                }
+                if ((mind_n_NaoZhong2>0)) {
+                        if (((hour()==mind_n_NaoZhong2) && (minute()==0))) {
+                                timer.run();
+                        }
+                }
+                if ((mind_n_NaoZhong3>0)) {
+                        if (((hour()==mind_n_NaoZhong3) && (minute()==0))) {
+                                timer.run();
+                        }
+                }
+                if ((mind_n_NaoZhong4>0)) {
+                        if (((hour()==mind_n_NaoZhong4) && (minute()==0))) {
+                                timer.run();
+                        }
+                }
+                if ((mind_n_NaoZhong5>0)) {
+                        if (((hour()==mind_n_NaoZhong5) && (minute()==0))) {
+                                timer.run();
+                        }
+                }
+                if ((mind_n_NaoZhong6>0)) {
+                        if (((hour()==mind_n_NaoZhong6) && (minute()==0))) {
+                                timer.run();
+                        }
+                }
+        }
+}
+void DF_SheZhi() {
+        mind_n_SheZhi = 1;
+        mind_n_XianShi = 0;
+        display.fillScreen(0);
+        display.setCursor(0, 16);
+        display.print("服药时间：");
+        display.setCursor(0, 32);
+        display.print("服药数量：");
+        display.setCursor(0, 48);
+        display.print("服药次数：");
+        display.setCursor(33, 0);
+        display.print("药1设置");
+        rgb.write(-1, 0x000000);
+        rgb.write(0, 0xFF0000);
+        delay(300);
+        while (!(buttonA.isPressed())) {
+                DF_FanQianFanHou();
+                DF_YaoShuLiangDuQu();
+                display.setCursor(75, 32);
+                display.print("        ");
+                display.setCursor(85, 32);
+                display.print(mind_n_YaoShuLiang);
+                if ((mind_n_YaoFan==0)) {
+                        display.setCursor(75, 16);
+                        display.print("        ");
+                        display.setCursor(75, 16);
+                        display.print("饭前");
+                }
+                else {
+                        display.setCursor(75, 16);
+                        display.print("        ");
+                        display.setCursor(75, 16);
+                        display.print("饭后");
+                }
+                if ((touchPadH.isTouched())) {
+                        if ((!((String(mind_s_Yao1ShiJian).indexOf(String("早")) != -1)))) {
+                                mind_s_Yao1ShiJian = (String(mind_s_Yao1ShiJian) + String("早"));
+                        }
+                }
+                if ((touchPadO.isTouched())) {
+                        if ((!((String(mind_s_Yao1ShiJian).indexOf(String("中")) != -1)))) {
+                                mind_s_Yao1ShiJian = (String(mind_s_Yao1ShiJian) + String("中"));
+                        }
+                }
+                if ((touchPadN.isTouched())) {
+                        if ((!((String(mind_s_Yao1ShiJian).indexOf(String("晚")) != -1)))) {
+                                mind_s_Yao1ShiJian = (String(mind_s_Yao1ShiJian) + String("晚"));
+                        }
+                }
+                if (((String(mind_s_Yao1ShiJian).indexOf(String("早")) != -1))) {
+                        display.setCursor(60, 48);
+                        display.print("早");
+                }
+                if (((String(mind_s_Yao1ShiJian).indexOf(String("中")) != -1))) {
+                        display.setCursor(80, 48);
+                        display.print("中");
+                }
+                if (((String(mind_s_Yao1ShiJian).indexOf(String("晚")) != -1))) {
+                        display.setCursor(100, 48);
+                        display.print("晚");
+                }
+                yield();
+        }
+        mind_n_Yao1Fan = mind_n_YaoFan;
+        mind_n_Yao1ShuLiang = mind_n_YaoShuLiang;
+        Blynk.virtualWrite(V0, mind_n_Yao1ShuLiang);
+        delay(500);
+        Blynk.virtualWrite(V2, mind_n_Yao1Fan);
+        delay(500);
+        Blynk.virtualWrite(V1, mind_s_Yao1ShiJian);
+        delay(500);
+        display.setCursor(33, 0);
+        display.print("                   ");
+        display.setCursor(33, 0);
+        display.print("药2设置");
+        display.setCursor(60, 48);
+        display.print("                  ");
+        rgb.write(-1, 0x000000);
+        rgb.write(1, 0xFF0000);
+        delay(300);
+        while (!(buttonA.isPressed())) {
+                DF_FanQianFanHou();
+                DF_YaoShuLiangDuQu();
+                display.setCursor(75, 32);
+                display.print("        ");
+                display.setCursor(85, 32);
+                display.print(mind_n_YaoShuLiang);
+                if ((mind_n_YaoFan==0)) {
+                        display.setCursor(75, 16);
+                        display.print("        ");
+                        display.setCursor(75, 16);
+                        display.print("饭前");
+                }
+                else {
+                        display.setCursor(75, 16);
+                        display.print("        ");
+                        display.setCursor(75, 16);
+                        display.print("饭后");
+                }
+                if ((touchPadH.isTouched())) {
+                        if ((!((String(mind_s_Yao2ShiJian).indexOf(String("早")) != -1)))) {
+                                mind_s_Yao2ShiJian = (String(mind_s_Yao2ShiJian) + String("早"));
+                        }
+                }
+                if ((touchPadO.isTouched())) {
+                        if ((!((String(mind_s_Yao2ShiJian).indexOf(String("中")) != -1)))) {
+                                mind_s_Yao2ShiJian = (String(mind_s_Yao2ShiJian) + String("中"));
+                        }
+                }
+                if ((touchPadN.isTouched())) {
+                        if ((!((String(mind_s_Yao2ShiJian).indexOf(String("晚")) != -1)))) {
+                                mind_s_Yao2ShiJian = (String(mind_s_Yao2ShiJian) + String("晚"));
+                        }
+                }
+                if (((String(mind_s_Yao2ShiJian).indexOf(String("早")) != -1))) {
+                        display.setCursor(60, 48);
+                        display.print("早");
+                }
+                if (((String(mind_s_Yao2ShiJian).indexOf(String("中")) != -1))) {
+                        display.setCursor(80, 48);
+                        display.print("中");
+                }
+                if (((String(mind_s_Yao2ShiJian).indexOf(String("晚")) != -1))) {
+                        display.setCursor(100, 48);
+                        display.print("晚");
+                }
+                yield();
+        }
+        mind_n_Yao2Fan = mind_n_YaoFan;
+        mind_n_Yao2ShuLiang = mind_n_YaoShuLiang;
+        Blynk.virtualWrite(V3, mind_n_Yao2ShuLiang);
+        delay(500);
+        Blynk.virtualWrite(V5, mind_n_Yao2Fan);
+        delay(500);
+        Blynk.virtualWrite(V4, mind_s_Yao2ShiJian);
+        delay(500);
+        display.setCursor(33, 0);
+        display.print("                   ");
+        display.setCursor(33, 0);
+        display.print("药3设置");
+        display.setCursor(60, 48);
+        display.print("                  ");
+        rgb.write(-1, 0x000000);
+        rgb.write(2, 0xFF0000);
+        delay(300);
+        while (!(buttonA.isPressed())) {
+                DF_FanQianFanHou();
+                DF_YaoShuLiangDuQu();
+                display.setCursor(75, 32);
+                display.print("        ");
+                display.setCursor(85, 32);
+                display.print(mind_n_YaoShuLiang);
+                if ((mind_n_YaoFan==0)) {
+                        display.setCursor(75, 16);
+                        display.print("        ");
+                        display.setCursor(75, 16);
+                        display.print("饭前");
+                }
+                else {
+                        display.setCursor(75, 16);
+                        display.print("        ");
+                        display.setCursor(75, 16);
+                        display.print("饭后");
+                }
+                if ((touchPadH.isTouched())) {
+                        if ((!((String(mind_s_Yao3ShiJian).indexOf(String("早")) != -1)))) {
+                                mind_s_Yao3ShiJian = (String(mind_s_Yao3ShiJian) + String("早"));
+                        }
+                }
+                if ((touchPadO.isTouched())) {
+                        if ((!((String(mind_s_Yao3ShiJian).indexOf(String("中")) != -1)))) {
+                                mind_s_Yao3ShiJian = (String(mind_s_Yao3ShiJian) + String("中"));
+                        }
+                }
+                if ((touchPadN.isTouched())) {
+                        if ((!((String(mind_s_Yao3ShiJian).indexOf(String("晚")) != -1)))) {
+                                mind_s_Yao3ShiJian = (String(mind_s_Yao3ShiJian) + String("晚"));
+                        }
+                }
+                if (((String(mind_s_Yao3ShiJian).indexOf(String("早")) != -1))) {
+                        display.setCursor(60, 48);
+                        display.print("早");
+                }
+                if (((String(mind_s_Yao3ShiJian).indexOf(String("中")) != -1))) {
+                        display.setCursor(80, 48);
+                        display.print("中");
+                }
+                if (((String(mind_s_Yao3ShiJian).indexOf(String("晚")) != -1))) {
+                        display.setCursor(100, 48);
+                        display.print("晚");
+                }
+                yield();
+        }
+        mind_n_Yao3Fan = mind_n_YaoFan;
+        mind_n_Yao3ShuLiang = mind_n_YaoShuLiang;
+        delay(300);
+        Blynk.virtualWrite(V6, mind_n_Yao3ShuLiang);
+        delay(500);
+        Blynk.virtualWrite(V8, mind_n_Yao3Fan);
+        delay(500);
+        Blynk.virtualWrite(V7, mind_s_Yao3ShiJian);
+        delay(500);
+        rgb.write(-1, 0x000000);
+        display.fillScreen(0);
+        display.setCursor(33, 0);
+        display.print("闹钟1设置");
+        display.setCursor(20, 32);
+        display.print("闹钟1时间：");
+        while (!(buttonA.isPressed())) {
+                mind_n_NaoZhong1 = (floor(((analogRead(P2)) / 170)));
+                if ((mind_n_NaoZhong1==0)) {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print("关闭");
+                        delay(200);
+                }
+                else {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print(mind_n_NaoZhong1);
+                        delay(200);
+                }
+                yield();
+        }
+        delay(1000);
+        Blynk.virtualWrite(V9, mind_n_NaoZhong1);
+        display.fillScreen(0);
+        display.setCursor(33, 0);
+        display.print("闹钟2设置");
+        display.setCursor(20, 32);
+        display.print("闹钟2时间：");
+        while (!(buttonA.isPressed())) {
+                mind_n_NaoZhong2 = (floor(((analogRead(P2)) / 170)));
+                if ((mind_n_NaoZhong2==0)) {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print("关闭");
+                        delay(200);
+                }
+                else {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print(mind_n_NaoZhong2);
+                        delay(200);
+                }
+                yield();
+        }
+        delay(1000);
+        Blynk.virtualWrite(V10, mind_n_NaoZhong2);
+        display.fillScreen(0);
+        display.setCursor(33, 0);
+        display.print("闹钟3设置");
+        display.setCursor(20, 32);
+        display.print("闹钟3时间：");
+        while (!(buttonA.isPressed())) {
+                mind_n_NaoZhong3 = (floor(((analogRead(P2)) / 170)));
+                if ((mind_n_NaoZhong3==0)) {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print("关闭");
+                        delay(200);
+                }
+                else {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print(mind_n_NaoZhong3);
+                        delay(200);
+                }
+                yield();
+        }
+        delay(1000);
+        Blynk.virtualWrite(V11, mind_n_NaoZhong3);
+        display.fillScreen(0);
+        display.setCursor(33, 0);
+        display.print("闹钟4设置");
+        display.setCursor(20, 32);
+        display.print("闹钟4时间：");
+        while (!(buttonA.isPressed())) {
+                mind_n_NaoZhong4 = (floor(((analogRead(P2)) / 170)));
+                if ((mind_n_NaoZhong4==0)) {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print("关闭");
+                        delay(200);
+                }
+                else {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print(mind_n_NaoZhong4);
+                        delay(200);
+                }
+                yield();
+        }
+        delay(1000);
+        Blynk.virtualWrite(V12, mind_n_NaoZhong4);
+        display.fillScreen(0);
+        display.setCursor(33, 0);
+        display.print("闹钟5设置");
+        display.setCursor(20, 32);
+        display.print("闹钟5时间：");
+        while (!(buttonA.isPressed())) {
+                mind_n_NaoZhong5 = (floor(((analogRead(P2)) / 170)));
+                if ((mind_n_NaoZhong5==0)) {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print("关闭");
+                        delay(200);
+                }
+                else {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print(mind_n_NaoZhong5);
+                        delay(200);
+                }
+                yield();
+        }
+        delay(1000);
+        Blynk.virtualWrite(V13, mind_n_NaoZhong5);
+        display.fillScreen(0);
+        display.setCursor(33, 0);
+        display.print("闹钟6设置");
+        display.setCursor(20, 32);
+        display.print("闹钟6时间：");
+        while (!(buttonA.isPressed())) {
+                mind_n_NaoZhong6 = (floor(((analogRead(P2)) / 170)));
+                if ((mind_n_NaoZhong6==0)) {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print("关闭");
+                        delay(200);
+                }
+                else {
+                        display.setCursor(85, 32);
+                        display.print("      ");
+                        display.setCursor(85, 32);
+                        display.print(mind_n_NaoZhong6);
+                        delay(200);
+                }
+                yield();
+        }
+        display.fillScreen(0);
+        mind_n_XianShi = 1;
+        mind_n_SheZhi = 0;
+        Blynk.virtualWrite(V14, mind_n_NaoZhong6);
+        delay(500);
+}
+void DF_ShiZhong() {
+        display.setCursor(3, 0);
+        display.print(month());
+        display.setCursor(15, 0);
+        display.print("月");
+        display.setCursor(25, 0);
+        display.print(day());
+        display.setCursor(38, 0);
+        display.print("日");
+        display.setCursor(52, 0);
+        display.print(hour());
+        display.setCursor(65, 0);
+        display.print("时");
+        if ((second()==0)) {
+                display.setCursor(76, 0);
+                display.print("                  ");
+        }
+        display.setCursor(76, 0);
+        display.print(minute());
+        display.setCursor(89, 0);
+        display.print("分");
+        display.setCursor(101, 0);
+        display.print(second());
+        display.setCursor(115, 0);
+        display.print("秒");
+        display.setCursor(3, 16);
+        display.print("闹钟1：");
+        if ((mind_n_NaoZhong1==0)) {
+                display.setCursor(40, 16);
+                display.print("无");
+        }
+        else {
+                display.setCursor(40, 16);
+                display.print(mind_n_NaoZhong1);
+        }
+        display.setCursor(70, 16);
+        display.print("闹钟2：");
+        if ((mind_n_NaoZhong2==0)) {
+                display.setCursor(106, 16);
+                display.print("无");
+        }
+        else {
+                display.setCursor(106, 16);
+                display.print(mind_n_NaoZhong2);
+        }
+        display.setCursor(3, 32);
+        display.print("闹钟3：");
+        if ((mind_n_NaoZhong3==0)) {
+                display.setCursor(40, 32);
+                display.print("无");
+        }
+        else {
+                display.setCursor(40, 32);
+                display.print(mind_n_NaoZhong3);
+        }
+        display.setCursor(70, 32);
+        display.print("闹钟4：");
+        if ((mind_n_NaoZhong4==0)) {
+                display.setCursor(106, 32);
+                display.print("无");
+        }
+        else {
+                display.setCursor(106, 32);
+                display.print(mind_n_NaoZhong4);
+        }
+        display.setCursor(3, 48);
+        display.print("闹钟5：");
+        if ((mind_n_NaoZhong5==0)) {
+                display.setCursor(40, 48);
+                display.print("无");
+        }
+        else {
+                display.setCursor(40, 48);
+                display.print(mind_n_NaoZhong5);
+        }
+        display.setCursor(70, 48);
+        display.print("闹钟6：");
+        if ((mind_n_NaoZhong6==0)) {
+                display.setCursor(106, 48);
+                display.print("无");
+        }
+        else {
+                display.setCursor(106, 48);
+                display.print(mind_n_NaoZhong6);
+        }
+}
+
+// 事件回调函数
+ BLYNK_CONNECTED() {
+        rtc.begin();
+}
+void myTimerEvent1() {
+        buzz.play(JUMP_UP, Once);
+        buzz.play(JUMP_DOWN, Once);
+        buzz.play(POWER_UP, Once);
+        buzz.play(POWER_DOWN, Once);
+        delay(500);
+}
+ BLYNK_WRITE(V0) {
+        mind_n_Yao1ShuLiang = param[0].asFloat();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V1) {
+        mind_s_Yao1ShiJian = param[0].asStr();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V2) {
+        mind_n_Yao1Fan = param[0].asFloat();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V3) {
+        mind_n_Yao2ShuLiang = param[0].asFloat();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V4) {
+        mind_s_Yao2ShiJian = param[0].asStr();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V5) {
+        mind_n_Yao2Fan = param[0].asFloat();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V6) {
+        mind_n_Yao3ShuLiang = param[0].asFloat();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V7) {
+        mind_s_Yao3ShiJian = param[0].asStr();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V8) {
+        mind_n_Yao3Fan = param[0].asFloat();
+        mind_n_XianShi = 1;
+}
+ BLYNK_WRITE(V9) {
+        mind_n_NaoZhong1 = param[0].asFloat();
+}
+ BLYNK_WRITE(V10) {
+        mind_n_NaoZhong2 = param[0].asFloat();
+}
+ BLYNK_WRITE(V11) {
+        mind_n_NaoZhong3 = param[0].asFloat();
+}
+ BLYNK_WRITE(V12) {
+        mind_n_NaoZhong4 = param[0].asFloat();
+}
+ BLYNK_WRITE(V13) {
+        mind_n_NaoZhong5 = param[0].asFloat();
+}
+ BLYNK_WRITE(V14) {
+        mind_n_NaoZhong6 = param[0].asFloat();
+}
+ BLYNK_WRITE(V15) {
+        mind_n_NaoZhongKaiGuan = param[0].asFloat();
+}
